@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(point_lio)
+project(point_lio2)
 
 SET(CMAKE_BUILD_TYPE "Debug")
 
@@ -84,15 +84,15 @@ include_directories(
   ${PYTHON_INCLUDE_DIRS}
 )
 
-add_executable(pointlio_mapping
-  src/main.cpp
-  src/imu_processing.cpp
-  src/preprocess.cpp
-  src/Estimator.cpp
-  src/laser_mapping/common.cpp
-  src/laser_mapping/callback.cpp
-  src/laser_mapping/process.cpp
-  include/ikd-Tree/ikd_Tree.cpp)
+set(src_list
+  src/estimator/Estimator.cpp
+  src/FOV_Checker/FOV_Checker.cpp
+  src/ikd_tree/ikd_Tree.cpp
+  src/preprocess/preprocess.cpp
+  src/laser_mapping.cpp
+  src/main.cpp)
+
+add_executable(pointlio_mapping ${src_list})
 
 ament_target_dependencies(pointlio_mapping ${dependencies})
 
@@ -108,7 +108,7 @@ install(
   DESTINATION lib/${PROJECT_NAME})
 
 install(
-  DIRECTORY config launch rviz
+  DIRECTORY config launch rviz_cfg
   DESTINATION share/${PROJECT_NAME}
 )
 
