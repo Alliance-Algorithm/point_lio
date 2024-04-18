@@ -56,7 +56,7 @@ cd ..
 colcon build --merge-install
 
 # if you just want to build this package
-colcon build --merge-install --packages-select point_lio2
+colcon build --merge-install --packages-select point_lio
 
 # then what you want is in the workspace/install/ 
 ```
@@ -64,6 +64,8 @@ colcon build --merge-install --packages-select point_lio2
 
 ### Usage
 #### Start up
+
+First of all, you should set the correct ip of your wired connection and mid-360 config (192.168.1.120 and **the same nuc ip**)
 
 ```sh
 # ensure that setup.bash is sourced
@@ -80,10 +82,10 @@ source /opt/ros/humble/setup.zsh
 source /path/to/point_ws/install/setup.zsh
 
 # start
-ros2 launch point_lio2 mapping_mid360.launch.py
+ros2 launch point_lio mapping_mid360.launch.py
 
 # if you want to check situation in rviz
-ros2 launch point_lio2 mapping_mid360.launch.py rviz:=true
+ros2 launch point_lio mapping_mid360.launch.py rviz:=true
 ```
 
 #### config
