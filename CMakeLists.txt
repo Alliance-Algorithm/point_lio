@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
-project(point_lio2)
+project(point_lio)
 
-SET(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Debug")
 
-ADD_COMPILE_OPTIONS(-std=c++17)
-ADD_COMPILE_OPTIONS(-std=c++17)
+add_compile_options(-std=c++17)
+add_compile_options(-std=c++17)
 set(CMAKE_CXX_FLAGS "-std=c++17 -O3")
 
 add_definitions(-DROOT_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/\")
@@ -14,7 +14,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -std=c++0x -std=c++17 -fexceptions")
+set(CMAKE_CXX_FLAGS
+    "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -std=c++0x -std=c++17 -fexceptions")
 
 message("Current CPU archtecture: ${CMAKE_SYSTEM_PROCESSOR}")
 
@@ -64,52 +65,36 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}   ${OpenMP_C_FLAGS}")
 find_path(MATPLOTLIB_CPP_INCLUDE_DIRS "matplotlibcpp.h")
 
 set(dependencies
-  rclcpp
-  rclcpp_components
-  geometry_msgs
-  nav_msgs
-  sensor_msgs
-  std_msgs
-  std_srvs
-  visualization_msgs
-  pcl_ros
-  pcl_conversions
-  livox_ros_driver2
-)
+    rclcpp
+    rclcpp_components
+    geometry_msgs
+    nav_msgs
+    sensor_msgs
+    std_msgs
+    std_srvs
+    visualization_msgs
+    pcl_ros
+    pcl_conversions
+    livox_ros_driver2)
 
-include_directories(
-  include
-  ${PCL_INCLUDE_DIRS}
-  ${EIGEN3_INCLUDE_DIR}
-  ${PYTHON_INCLUDE_DIRS}
-)
+include_directories(include ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR}
+                    ${PYTHON_INCLUDE_DIRS})
 
 set(src_list
-  src/estimator/Estimator.cpp
-  src/FOV_Checker/FOV_Checker.cpp
-  src/ikd_tree/ikd_Tree.cpp
-  src/preprocess/preprocess.cpp
-  src/laser_mapping.cpp
-  src/main.cpp)
+    src/estimator/Estimator.cpp src/FOV_Checker/FOV_Checker.cpp
+    src/ikd_tree/ikd_Tree.cpp src/preprocess/preprocess.cpp
+    src/laser_mapping.cpp src/main.cpp)
 
 add_executable(pointlio_mapping ${src_list})
 
 ament_target_dependencies(pointlio_mapping ${dependencies})
 
-target_link_libraries(pointlio_mapping
-  ${PCL_LIBRARIES}
-  ${PYTHON_LIBRARIES})
+target_link_libraries(pointlio_mapping ${PCL_LIBRARIES} ${PYTHON_LIBRARIES})
 
-target_include_directories(pointlio_mapping
-  PRIVATE ${PYTHON_INCLUDE_DIRS})
+target_include_directories(pointlio_mapping PRIVATE ${PYTHON_INCLUDE_DIRS})
 
-install(
-  TARGETS pointlio_mapping
-  DESTINATION lib/${PROJECT_NAME})
+install(TARGETS pointlio_mapping DESTINATION lib/${PROJECT_NAME})
 
-install(
-  DIRECTORY config launch rviz_cfg
-  DESTINATION share/${PROJECT_NAME}
-)
+install(DIRECTORY config launch rviz_cfg DESTINATION share/${PROJECT_NAME})
 
 ament_package()

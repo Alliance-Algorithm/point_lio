@@ -1,4 +1,4 @@
-/**:
+laserMapping:
     ros__parameters:
         common:
             lid_topic: "/livox/lidar"
@@ -48,8 +48,8 @@
 
         publish:
             path_en: false # false: close the path output
-            scan_publish_en: false # false: close all the point cloud output
-            scan_bodyframe_pub_en: false # true: output the point cloud scans in IMU-body-frame
+            scan_publish_en: true # false: close all the point cloud output
+            scan_bodyframe_pub_en: true # true: output the point cloud scans in IMU-body-frame
 
         pcd_save:
             pcd_save_en: false
