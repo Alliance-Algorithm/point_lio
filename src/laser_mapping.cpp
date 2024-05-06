@@ -506,8 +506,7 @@ void map_incremental()
     ikdtree.Add_Points(PointNoNeedDownsample, false);
 }
 
-void publish_init_kdtree(
-    const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr& pubLaserCloudFullRes)
+void publish_init_kdtree(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr& pubLaserCloudFullRes)
 {
     int size_init_ikdtree = ikdtree.size();
     PointCloudXYZI::Ptr laserCloudInit(new PointCloudXYZI(size_init_ikdtree, 1));
@@ -521,10 +520,11 @@ void publish_init_kdtree(
 
     laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
     laserCloudmsg.header.frame_id = "lidar_init";
+
     pubLaserCloudFullRes->publish(laserCloudmsg);
 }
 
-PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI(500000, 1));
+// PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI(500000, 1));
 PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
 
 void publish_frame_world(
