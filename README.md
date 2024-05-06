@@ -17,6 +17,17 @@
 - livox-ros-driver2
 
     [how to install](https://github.com/Livox-SDK/livox_ros_driver2)
+    ```json
+    // the ip of lidar
+    "ip": "192.168.1.156"
+    "ip": "192.168.1.120"
+    ```
+    ```py
+    # 0-Pointcloud2(PointXYZRTL), 1-customized pointcloud format
+    xfer_format = 1
+    # frequency of publish, 5.0, 10.0, 20.0, 50.0, etc.
+    publish_freq = 50.0 
+    ```
 
 - pcl
 
@@ -40,6 +51,38 @@
 
     but livox_ros_driver2 still needs to be installed manually
 
+#### Configure
+
+The config file is in `/path/to/point_lio/config`, for deficiency in runtime, any point cloud msg should not be published
+
+```yaml
+laserMapping:
+    ros__parameters:
+        common:
+            cut_frame: true 
+            # if you want to publish position more frequently
+            cut_frame_time_interval: 0.02 
+            # to fit the lidar publish frequency
+
+        preprocess:
+            scan_line: 40 
+            # default: 4
+
+        publish:
+            path_en: true 
+            # false: close the path output
+            scan_publish_en: true 
+            # false: close all the point cloud output
+            scan_bodyframe_pub_en: false 
+            # true: output the point cloud scans in IMU-body-frame
+
+        pcd_save:
+            pcd_save_en: false
+            interval: -1 
+            # how many LiDAR frames saved in each pcd file;
+            # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.
+
+```
 #### Build
 
 ```sh
@@ -85,23 +128,8 @@ source /path/to/point_ws/install/setup.zsh
 ros2 launch point_lio mapping_mid360.launch.py
 
 # if you want to check situation in rviz
+# do not forget to choose the correct frame_id
 ros2 launch point_lio mapping_mid360.launch.py rviz:=true
-```
-
-#### config
-
-The config file is in `/path/to/point_lio/config`, for dfficiency in runtime, any point cloud msg should not be published
-
-```yaml
-publish:
-    path_en: false 
-    scan_publish_en: false 
-    scan_bodyframe_pub_en: false 
-
-pcd_save:
-    pcd_save_en: false
-    interval: -1 
-
 ```
 
 Now you can subscribe the topic "/position" to get position relative to point of starting

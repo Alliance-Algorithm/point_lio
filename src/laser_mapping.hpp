@@ -35,7 +35,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
-#define MAXN            (720000)
+#define MAXN (720000)
 #define PUBFRAME_PERIOD (20)
 
 extern string root_dir;
@@ -81,15 +81,10 @@ void lasermap_fov_segment();
 bool sync_packages(MeasureGroup& meas);
 void map_incremental();
 
-void publish_init_kdtree(
-    const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr& pubLaserCloudFullRes);
-void publish_frame_world(
-    const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr& pubLaserCloudFullRes);
-void publish_frame_body(
-    const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr& pubLaserCloudFull_body);
-void publish_odometry(
-    const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr& pubOdomAftMapped,
-    std::shared_ptr<tf2_ros::TransformBroadcaster>& tf_br);
+void publish_init_kdtree(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr& pubLaserCloudFullRes);
+void publish_frame_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr& pubLaserCloudFullRes);
+void publish_frame_body(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr& pubLaserCloudFull_body);
+void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr& pubOdomAftMapped, std::shared_ptr<tf2_ros::TransformBroadcaster>& tf_br);
 void publish_path(const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr& pubPath);
 
 void standard_pcl_cbk(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
