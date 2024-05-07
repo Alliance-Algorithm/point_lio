@@ -12,23 +12,23 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-extern PointCloudXYZI::Ptr normvec; //(new PointCloudXYZI(100000, 1));
+extern PointCloudXYZI::Ptr normvec;
 extern std::vector<int> time_seq;
-extern PointCloudXYZI::Ptr feats_down_body; //(new PointCloudXYZI());
-extern PointCloudXYZI::Ptr feats_down_world; //(new PointCloudXYZI());
+extern PointCloudXYZI::Ptr cloud_body_link;
+extern PointCloudXYZI::Ptr cloud_world_link;
 extern std::vector<V3D> pbody_list;
 extern std::vector<PointVector> Nearest_Points;
-extern KD_TREE<PointType> ikdtree;
+extern KD_TREE<PointType> ikd_tree;
 extern std::vector<float> pointSearchSqDis;
-extern bool point_selected_surf[100000]; // = {0};
+extern bool point_selected_surf[100000];
 extern std::vector<M3D> crossmat_list;
-extern int effct_feat_num;
+extern int effect_feat_num;
 extern int k;
 extern int idx;
 extern V3D angvel_avr, acc_avr;
 
-extern V3D Lidar_T_wrt_IMU; //(Zero3d);
-extern M3D Lidar_R_wrt_IMU; //(Eye3d);
+extern V3D Lidar_T_wrt_IMU;
+extern M3D Lidar_R_wrt_IMU;
 
 typedef MTK::vect<3, double> vect3;
 typedef MTK::SO3<double> SO3;
@@ -83,7 +83,7 @@ void h_model_output(state_output& s, esekfom::dyn_share_modified<double>& ekfom_
 
 void h_model_IMU_output(state_output& s, esekfom::dyn_share_modified<double>& ekfom_data);
 
-void pointBodyToWorld(PointType const* const pi, PointType* const po);
+void transform_body_to_world(PointType const* const pi, PointType* const po);
 
 const bool time_list(PointType& x, PointType& y); // {return (x.curvature < y.curvature);};
 

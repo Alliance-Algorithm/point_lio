@@ -32,7 +32,7 @@ void KD_TREE<PointType>::InitializeKDTree(float delete_param, float balance_para
 {
     Set_delete_criterion_param(delete_param);
     Set_balance_criterion_param(balance_param);
-    set_downsample_param(box_length);
+    set_down_sample_param(box_length);
 }
 
 template <typename PointType>

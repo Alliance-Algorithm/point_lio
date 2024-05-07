@@ -38,65 +38,70 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     ImuProcess()
-        : b_first_frame_(true)
-        , imu_need_init_(true)
+        : is_first_frame_(true)
+        , is_need_initialize_(true)
         , gravity_align_(false)
-        , logger(rclcpp::get_logger("laserMapping"))
+        , logger_(rclcpp::get_logger("laserMapping"))
     {
         imu_en = true;
-        init_iter_num = 1;
+        initialize_count_ = 1;
         mean_acc = V3D(0, 0, -1.0);
-        mean_gyr = V3D(0, 0, 0);
+        mean_gyr_ = V3D(0, 0, 0);
     }
 
-    void Reset()
+    void reset()
     {
-        RCLCPP_WARN(logger, "Reset ImuProcess");
+        RCLCPP_WARN(logger_, "Reset ImuProcess");
         mean_acc = V3D(0, 0, -1.0);
-        mean_gyr = V3D(0, 0, 0);
-        imu_need_init_ = true;
-        init_iter_num = 1;
+        mean_gyr_ = V3D(0, 0, 0);
+        is_need_initialize_ = true;
+        initialize_count_ = 1;
     }
 
-    void Process(const MeasureGroup& meas, const PointCloudXYZI::Ptr& cur_pcl_un_)
+    void process(const CombinedPackage& package, PointCloudXYZI::Ptr& point_cloud_undistorted)
     {
-
         if (imu_en) {
-            if (meas.imu.empty())
+            if (package.imu.empty())
                 return;
-            assert(meas.lidar != nullptr);
 
-            if (imu_need_init_) {
+            assert(package.lidar != nullptr);
+
+            if (is_need_initialize_) {
                 /// The very first lidar frame
-                IMU_init(meas, init_iter_num);
+                imu_init(package);
 
-                imu_need_init_ = true;
+                is_need_initialize_ = true;
 
-                if (init_iter_num > MAX_INI_COUNT) {
-                    RCLCPP_INFO(logger, "IMU Initializing: %.1f %%", 100.0);
-                    imu_need_init_ = false;
-                    *cur_pcl_un_ = *(meas.lidar);
+                if (initialize_count_ > MAX_INI_COUNT) {
+                    RCLCPP_INFO(logger_, "IMU Initializing: %.1f %%", 100.0);
+                    is_need_initialize_ = false;
+                    *point_cloud_undistorted = *(package.lidar);
                 }
                 return;
             }
             if (!gravity_align_)
                 gravity_align_ = true;
-            *cur_pcl_un_ = *(meas.lidar);
+            *point_cloud_undistorted = *(package.lidar);
             return;
+
         } else {
-            if (!b_first_frame_) {
+            if (!is_first_frame_) {
+
                 if (!gravity_align_)
                     gravity_align_ = true;
+
             } else {
-                b_first_frame_ = false;
+
+                is_first_frame_ = false;
                 return;
             }
-            *cur_pcl_un_ = *(meas.lidar);
+
+            *point_cloud_undistorted = *(package.lidar);
             return;
         }
     }
 
-    void Set_init(Eigen::Vector3d& tmp_gravity, Eigen::Matrix3d& rot)
+    void set_init(Eigen::Vector3d& tmp_gravity, Eigen::Matrix3d& rot)
     {
         /** 1. initializing the gravity, gyro bias, acc and gyro covariance
          ** 2. normalize the acceleration measurenments to unit gravity **/
@@ -125,42 +130,47 @@ public:
     int lidar_type;
     bool imu_en;
     V3D mean_acc, gravity_;
-    bool imu_need_init_ = true;
-    bool b_first_frame_ = true;
+    bool is_need_initialize_ = true;
+    bool is_first_frame_ = true;
     bool gravity_align_ = false;
 
 private:
-    void IMU_init(const MeasureGroup& meas, int& N)
+    void imu_init(const CombinedPackage& package)
     {
-        /** 1. initializing the gravity, gyro bias, acc and gyro covariance
-         ** 2. normalize the acceleration measurenments to unit gravity **/
-        RCLCPP_INFO(logger, "IMU Initializing: %.1f %%", double(N) / MAX_INI_COUNT * 100);
-        V3D cur_acc, cur_gyr;
+        // 1. initializing the gravity, gyro bias, acc and gyro covariance
+        // 2. normalize the acceleration measurements to unit gravity
+        RCLCPP_INFO(logger_, "IMU Initializing: %.1f %%", double(initialize_count_) / MAX_INI_COUNT * 100);
 
-        if (b_first_frame_) {
-            Reset();
-            N = 1;
-            b_first_frame_ = false;
-            const auto& imu_acc = meas.imu.front()->linear_acceleration;
-            const auto& gyr_acc = meas.imu.front()->angular_velocity;
+        auto current_acc = Eigen::Matrix<double, 3, 1>();
+        auto current_gyr = Eigen::Matrix<double, 3, 1>();
+
+        if (is_first_frame_) {
+            this->reset();
+            initialize_count_ = 1;
+            is_first_frame_ = false;
+            const auto& imu_acc = package.imu.front()->linear_acceleration;
+            const auto& gyr_acc = package.imu.front()->angular_velocity;
             mean_acc << imu_acc.x, imu_acc.y, imu_acc.z;
-            mean_gyr << gyr_acc.x, gyr_acc.y, gyr_acc.z;
+            mean_gyr_ << gyr_acc.x, gyr_acc.y, gyr_acc.z;
         }
 
-        for (const auto& imu : meas.imu) {
-            const auto& imu_acc = imu->linear_acceleration;
-            const auto& gyr_acc = imu->angular_velocity;
-            cur_acc << imu_acc.x, imu_acc.y, imu_acc.z;
-            cur_gyr << gyr_acc.x, gyr_acc.y, gyr_acc.z;
+        for (const auto& imu : package.imu) {
 
-            mean_acc += (cur_acc - mean_acc) / N;
-            mean_gyr += (cur_gyr - mean_gyr) / N;
+            current_acc << imu->linear_acceleration.x,
+                imu->linear_acceleration.y,
+                imu->linear_acceleration.z;
+            current_gyr << imu->angular_velocity.x,
+                imu->angular_velocity.y,
+                imu->angular_velocity.z;
 
-            N++;
+            mean_acc += (current_acc - mean_acc) / initialize_count_;
+            mean_gyr_ += (current_gyr - mean_gyr_) / initialize_count_;
+
+            initialize_count_++;
         }
     }
 
-    V3D mean_gyr;
-    int init_iter_num = 1;
-    rclcpp::Logger logger;
+    V3D mean_gyr_;
+    int initialize_count_ = 1;
+    rclcpp::Logger logger_;
 };

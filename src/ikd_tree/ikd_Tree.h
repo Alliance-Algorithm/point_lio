@@ -45,10 +45,6 @@ enum delete_point_storage_set {
 
 template <typename PointType>
 class KD_TREE {
-    // using MANUAL_Q_ = MANUAL_Q<typename PointType>;
-    // using PointVector = std::vector<PointType>;
-
-    // using MANUAL_Q_ = MANUAL_Q<typename PointType>;
 public:
     using PointVector = std::vector<PointType, Eigen::aligned_allocator<PointType>>;
     using Ptr = std::shared_ptr<KD_TREE<PointType>>;
@@ -302,7 +298,7 @@ public:
     {
         balance_criterion_param = balance_param;
     }
-    void set_downsample_param(float downsample_param)
+    void set_down_sample_param(float downsample_param)
     {
         downsample_size = downsample_param;
     }
@@ -325,6 +321,3 @@ public:
     KD_TREE_NODE* Root_Node = nullptr;
     int max_queue_size = 0;
 };
-
-// template <typename PointType>
-// PointType KD_TREE<PointType>::zeroP = PointType(0,0,0);

@@ -21,7 +21,7 @@ def generate_launch_description():
             "check_satu": True,
             "init_map_size": 10,
             "point_filter_num": 3,  # Options: 1, 3
-            "space_down_sample": True,
+            "space_down_sample": True,  # would you like to down sample?
             "filter_size_surf": 0.5,  # Options: 0.5, 0.3, 0.2, 0.15, 0.1
             "filter_size_map": 0.5,  # Options: 0.5, 0.3, 0.15, 0.1
             "cube_side_length": 1000.0,  # Option: 1000

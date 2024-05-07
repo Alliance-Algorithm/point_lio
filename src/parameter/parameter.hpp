@@ -7,22 +7,28 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <cstring>
+#include <string>
 
 inline bool is_first_frame = true;
 inline double lidar_end_time = 0.0, first_lidar_time = 0.0, time_con = 0.0;
-inline double last_timestamp_lidar = -1.0, last_timestamp_imu = -1.0;
+
+// subscription callback
+inline double stamp_lidar_last = -1.0;
+inline double stamp_imu_last = -1.0;
+
+// map save process
 inline int pcd_index = 0;
 
 inline std::string lid_topic, imu_topic;
 inline bool prop_at_freq_of_imu, check_satu, con_frame, cut_frame;
-inline bool use_imu_as_input, space_down_sample, publish_odometry_without_downsample;
+inline bool use_imu_as_input, space_down_sample, publish_odometry_without_down_sample;
 inline int init_map_size, con_frame_num;
 inline double match_s, satu_acc, satu_gyro, cut_frame_time_interval;
 inline float plane_thr;
 inline double filter_size_surf_min, filter_size_map_min, fov_deg;
 inline double cube_len;
 inline float DET_RANGE;
-inline bool imu_en, gravity_align, non_station_start;
+inline bool imu_en, gravity_align, is_start_in_aggressive_motion;
 inline double imu_time_inte;
 inline double laser_point_cov, acc_norm;
 inline double vel_cov, acc_cov_input, gyr_cov_input;
@@ -33,9 +39,13 @@ inline std::vector<double> gravity_init, gravity;
 inline std::vector<double> extrinT;
 inline std::vector<double> extrinR;
 inline bool runtime_pos_log, pcd_save_en, path_en, extrinsic_est_en = true;
-inline bool scan_pub_en, scan_body_pub_en;
+inline bool scan_publish_enable, scan_body_pub_en;
 inline shared_ptr<Preprocess> p_pre;
-inline double time_lag_imu_to_lidar = 0.0;
+inline double lag_between_imu_and_lidar = 0.0;
+
+// premapping
+inline bool is_premapping_enable = false;
+inline std::string pcd_path;
 
 inline void readParameters(shared_ptr<rclcpp::Node>& node)
 {
@@ -60,7 +70,7 @@ inline void readParameters(shared_ptr<rclcpp::Node>& node)
     node->get_parameter("mapping.det_range", DET_RANGE);
     node->get_parameter("mapping.fov_degree", fov_deg);
     node->get_parameter("mapping.imu_en", imu_en);
-    node->get_parameter("mapping.start_in_aggressive_motion", non_station_start);
+    node->get_parameter("mapping.start_in_aggressive_motion", is_start_in_aggressive_motion);
     node->get_parameter("mapping.extrinsic_est_en", extrinsic_est_en);
     node->get_parameter("mapping.imu_time_inte", imu_time_inte);
     node->get_parameter("mapping.lidar_meas_cov", laser_point_cov);
@@ -86,7 +96,7 @@ inline void readParameters(shared_ptr<rclcpp::Node>& node)
     node->get_parameter("common.con_frame_num", con_frame_num);
     node->get_parameter("common.cut_frame", cut_frame);
     node->get_parameter("common.cut_frame_time_interval", cut_frame_time_interval);
-    node->get_parameter("common.time_lag_imu_to_lidar", time_lag_imu_to_lidar);
+    node->get_parameter("common.time_lag_imu_to_lidar", lag_between_imu_and_lidar);
 
     node->get_parameter("preprocess.blind", p_pre->blind);
     node->get_parameter("preprocess.lidar_type", lidar_type);
@@ -95,11 +105,14 @@ inline void readParameters(shared_ptr<rclcpp::Node>& node)
     node->get_parameter("preprocess.timestamp_unit", p_pre->time_unit);
 
     node->get_parameter("publish.path_en", path_en);
-    node->get_parameter("publish.scan_publish_en", scan_pub_en);
-    node->get_parameter("publish.scan_bodyframe_pub_en", scan_body_pub_en);
+    node->get_parameter("publish.scan_publish_en", scan_publish_enable);
+    node->get_parameter("publish.scan_body_link_pub_en", scan_body_pub_en);
 
     node->get_parameter("pcd_save.pcd_save_en", pcd_save_en);
     node->get_parameter("pcd_save.interval", pcd_save_interval);
 
-    node->get_parameter("odometry.publish_odometry_without_downsample", publish_odometry_without_downsample);
+    node->get_parameter("odometry.publish_odometry_without_downsample", publish_odometry_without_down_sample);
+
+    node->get_parameter("pre_mapping.enable", is_premapping_enable);
+    node->get_parameter("pre_mapping.pcd_path", pcd_path);
 }

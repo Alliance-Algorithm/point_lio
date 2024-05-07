@@ -52,19 +52,21 @@ const M3F Eye3f(M3F::Identity());
 const V3D Zero3d(0, 0, 0);
 const V3F Zero3f(0, 0, 0);
 
-struct MeasureGroup // Lidar data and imu dates for the curent process
-{
-    MeasureGroup()
+// Lidar data and imu dates for the current process
+struct CombinedPackage {
+    double lidar_begin_time;
+    double lidar_end_time;
+
+    PointCloudXYZI::Ptr lidar;
+    deque<sensor_msgs::msg::Imu::ConstSharedPtr> imu;
+
+    CombinedPackage()
     {
-        lidar_beg_time = 0.0;
-        lidar_last_time = 0.0;
+        lidar_begin_time = 0.0;
+        lidar_end_time = 0.0;
+
         this->lidar.reset(new PointCloudXYZI());
     };
-
-    double lidar_beg_time;
-    double lidar_last_time;
-    PointCloudXYZI::Ptr lidar;
-    deque<sensor_msgs::msg::Imu::ConstSharedPtr> imu {};
 };
 
 template <typename T>
@@ -141,6 +143,7 @@ bool esti_plane(Matrix<T, 4, 1>& pca_result, const PointVector& point, const T& 
 {
     Matrix<T, NUM_MATCH_POINTS, 3> A;
     Matrix<T, NUM_MATCH_POINTS, 1> b;
+
     A.setZero();
     b.setOnes();
     b *= -1.0f;
@@ -164,6 +167,7 @@ bool esti_plane(Matrix<T, 4, 1>& pca_result, const PointVector& point, const T& 
             return false;
         }
     }
+
     return true;
 }
 
