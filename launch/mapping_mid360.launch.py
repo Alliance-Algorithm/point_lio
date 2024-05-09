@@ -9,14 +9,14 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     # Declare the RViz argument
     rviz_arg = DeclareLaunchArgument(
-        "rviz", default_value="false", description="Flag to launch RViz."
+        "rviz", default_value="false", description="flag to launch RViz."
     )
 
     # Node parameters, including those from the YAML configuration file
     laser_mapping_params = [
         PathJoinSubstitution([FindPackageShare("point_lio"), "config", "mid360.yaml"]),
         {
-            "use_imu_as_input": False,  # Change to True to use IMU as input of Point-LIO
+            "use_imu_as_input": True,  # Change to True to use IMU as input of Point-LIO
             "prop_at_freq_of_imu": True,
             "check_satu": True,
             "init_map_size": 10,
@@ -32,14 +32,13 @@ def generate_launch_description():
     # Node definition for laserMapping with Point-LIO
     laser_mapping_node = Node(
         package="point_lio",
-        executable="pointlio_mapping",
-        name="laserMapping",
+        executable="run",
         output="screen",
         parameters=laser_mapping_params,
         # prefix='gdb -ex run --args'
     )
 
-    # Conditional RViz node launch
+    # Conditional rviz node launch
     rviz_node = Node(
         package="rviz2",
         executable="rviz2",

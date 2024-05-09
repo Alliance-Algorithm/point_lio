@@ -41,7 +41,7 @@ public:
         : is_first_frame_(true)
         , is_need_initialize_(true)
         , gravity_align_(false)
-        , logger_(rclcpp::get_logger("laserMapping"))
+        , logger_(rclcpp::get_logger("imu_process"))
     {
         imu_en = true;
         initialize_count_ = 1;
@@ -51,7 +51,7 @@ public:
 
     void reset()
     {
-        RCLCPP_WARN(logger_, "Reset ImuProcess");
+        RCLCPP_WARN(logger_, "reset imu process");
         mean_acc = V3D(0, 0, -1.0);
         mean_gyr_ = V3D(0, 0, 0);
         is_need_initialize_ = true;
@@ -73,7 +73,7 @@ public:
                 is_need_initialize_ = true;
 
                 if (initialize_count_ > MAX_INI_COUNT) {
-                    RCLCPP_INFO(logger_, "IMU Initializing: %.1f %%", 100.0);
+                    RCLCPP_INFO(logger_, "imu initializing: %.1f %%", 100.0);
                     is_need_initialize_ = false;
                     *point_cloud_undistorted = *(package.lidar);
                 }
@@ -139,7 +139,6 @@ private:
     {
         // 1. initializing the gravity, gyro bias, acc and gyro covariance
         // 2. normalize the acceleration measurements to unit gravity
-        RCLCPP_INFO(logger_, "IMU Initializing: %.1f %%", double(initialize_count_) / MAX_INI_COUNT * 100);
 
         auto current_acc = Eigen::Matrix<double, 3, 1>();
         auto current_gyr = Eigen::Matrix<double, 3, 1>();
@@ -168,6 +167,8 @@ private:
 
             initialize_count_++;
         }
+
+        RCLCPP_INFO(logger_, "imu initializing: %.1f %%", double(initialize_count_) / MAX_INI_COUNT * 100);
     }
 
     V3D mean_gyr_;

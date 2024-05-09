@@ -79,7 +79,7 @@ inline double update_time = 0;
 inline auto euler_cur = Eigen::Matrix<double, 3, 1>();
 
 // log
-inline auto logger = rclcpp::get_logger("laserMapping");
+inline auto logger = rclcpp::get_logger("mapping");
 inline double
     log_time_1[time_log_size_max],
     log_time_0[time_log_size_max],

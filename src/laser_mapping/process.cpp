@@ -1,4 +1,5 @@
 #include "laser_mapping.hpp"
+#include <rclcpp/logging.hpp>
 
 constexpr float MOV_THRESHOLD = 1.5f;
 
@@ -161,7 +162,6 @@ void pointcloud_subscription_callback(const sensor_msgs::msg::PointCloud2::Share
 
         for (int i = 0; i < ptr->size(); i++) {
             ptr_div->push_back(ptr->points[i]);
-            // cout << "check time:" << ptr->points[i].curvature << endl;
             if (ptr->points[i].curvature / double(1000) + get_time_sec(msg->header.stamp) - time_div
                 > cut_frame_time_interval) {
                 if (ptr_div->size() < 1)
@@ -237,9 +237,7 @@ void livox_subscription_callback(const livox_ros_driver2::msg::CustomMsg::Shared
                 if (ptr_div->size() < 1)
                     continue;
                 PointCloudXYZI::Ptr ptr_div_i(new PointCloudXYZI());
-                // cout << "ptr div num:" << ptr_div->size() << endl;
                 *ptr_div_i = *ptr_div;
-                // cout << "ptr div i num:" << ptr_div_i->size() << endl;
                 lidar_buffer.push_back(ptr_div_i);
                 time_buffer.push_back(time_div);
                 time_div += ptr->points[i].curvature / double(1000);
@@ -317,9 +315,11 @@ bool unpack(CombinedPackage& package)
             package.lidar = lidar_buffer.front();
 
             if (package.lidar->points.size() < 1) {
-                cout << "lose lidar" << endl;
+                RCLCPP_WARN(logger, "lose lidar");
+
                 lidar_buffer.pop_front();
                 time_buffer.pop_front();
+
                 return false;
             }
 
@@ -338,8 +338,6 @@ bool unpack(CombinedPackage& package)
         }
 
         if (stamp_imu_last < lidar_end_time) {
-
-            // RCLCPP_WARN(rclcpp::get_logger("laserMapping"), "lidar time error");
 
             return false;
         }
@@ -391,7 +389,7 @@ bool unpack(CombinedPackage& package)
             lidar_buffer.pop_front();
 
             if (package.lidar->points.size() < 1) {
-                cout << "lose lidar" << std::endl;
+                RCLCPP_WARN(logger, "lose lidar");
                 return false;
             }
 

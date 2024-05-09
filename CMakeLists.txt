@@ -80,7 +80,7 @@ set(dependencies
 include_directories(include ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR}
                     ${PYTHON_INCLUDE_DIRS})
 
-set(src_list
+set(src
     src/estimator/Estimator.cpp
     src/FOV_Checker/FOV_Checker.cpp
     src/ikd_tree/ikd_Tree.cpp
@@ -89,13 +89,13 @@ set(src_list
     src/laser_mapping/ros2_interface.cpp
     src/main.cpp)
 
-add_executable(pointlio_mapping ${src_list})
-target_link_libraries(pointlio_mapping ${PCL_LIBRARIES} ${PYTHON_LIBRARIES})
-target_include_directories(pointlio_mapping PRIVATE ${PYTHON_INCLUDE_DIRS})
+add_executable(run ${src})
+target_link_libraries(run ${PCL_LIBRARIES} ${PYTHON_LIBRARIES})
+target_include_directories(run PRIVATE ${PYTHON_INCLUDE_DIRS})
 
-ament_target_dependencies(pointlio_mapping ${dependencies})
+ament_target_dependencies(run ${dependencies})
 
-install(TARGETS pointlio_mapping DESTINATION lib/${PROJECT_NAME})
+install(TARGETS run DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY config launch rviz_cfg DESTINATION share/${PROJECT_NAME})
 
 ament_package()

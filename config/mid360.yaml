@@ -1,4 +1,7 @@
-laserMapping:
+# this name should be same with what in node
+# be attention to the param "name" in launch.py, it will replace all the node name in src code
+# then may cause the mismatching between param.yaml and node
+mapping:
     ros__parameters:
         common:
             lid_topic: "/livox/lidar"
@@ -57,5 +60,5 @@ laserMapping:
             interval: -1
 
         pre_mapping:
-            enable: true
+            enable: false
             pcd_path: "/workspaces/sentry/slam_ws/src/point_lio/PCD/map.pcd"
