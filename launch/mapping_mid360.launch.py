@@ -46,7 +46,7 @@ def generate_launch_description():
         arguments=[
             "-d",
             PathJoinSubstitution(
-                [FindPackageShare("point_lio"), "rviz_cfg", "loam_livox.rviz"]
+                [FindPackageShare("point_lio"), "rviz", "loam_livox.rviz"]
             ),
         ],
         condition=IfCondition(LaunchConfiguration("rviz")),

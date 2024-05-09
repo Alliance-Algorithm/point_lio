@@ -96,6 +96,6 @@ target_include_directories(run PRIVATE ${PYTHON_INCLUDE_DIRS})
 ament_target_dependencies(run ${dependencies})
 
 install(TARGETS run DESTINATION lib/${PROJECT_NAME})
-install(DIRECTORY config launch rviz_cfg DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY config launch rviz DESTINATION share/${PROJECT_NAME})
 
 ament_package()
