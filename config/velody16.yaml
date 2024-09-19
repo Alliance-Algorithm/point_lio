@@ -60,6 +60,8 @@
             path_en: true                                   # false: close the path output
             scan_publish_en: true                           # false: close all the point cloud output
             scan_bodyframe_pub_en: false                    # true: output the point cloud scans in IMU-body-frame
+            dense_publish_en: True                          # False: low down the points number in a global-frame point clouds scan.
+            tf_send_en: False                               # true: send transform from 'camera_init' to 'aft_mapped'
 
         pcd_save:
             pcd_save_en: false
