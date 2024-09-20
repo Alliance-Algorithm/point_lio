@@ -14,9 +14,9 @@
         common:
             lid_topic: "livox/lidar"
             imu_topic: "livox/imu"
-            con_frame: false                                # true: if you need to combine several LiDAR frames into one
+            con_frame: False                                # True: if you need to combine several LiDAR frames into one
             con_frame_num: 1                                # the number of frames combined
-            cut_frame: false                                # true: if you need to cut one LiDAR frame into several subframes
+            cut_frame: False                                # True: if you need to cut one LiDAR frame into several subframes
             cut_frame_time_interval: 0.1                    # should be integral fraction of 1 / LiDAR frequency
             time_diff_lidar_to_imu: 0.0                     # Time offset between LiDAR and IMU calibrated by other algorithms, e.g., LI-Init (find in Readme)
 
@@ -27,8 +27,8 @@
             blind: 0.5
 
         mapping:
-            imu_en: true
-            extrinsic_est_en: false                         # for aggressive motion, set this variable false
+            imu_en: True
+            extrinsic_est_en: False                         # for aggressive motion, set this variable False
             imu_time_inte: 0.005                            # = 1 / frequency of IMU
             lidar_time_inte: 0.1
             satu_acc: 3.0                                   # the saturation value of IMU's acceleration. not related to the units
@@ -54,16 +54,16 @@
                            0.0, 0.0, 1.0 ]
 
         odometry:
-            publish_odometry_without_downsample: false
+            publish_odometry_without_downsample: False
 
         publish:
-            path_en: true                                   # false: close the path output
-            scan_publish_en: true                           # false: close all the point cloud output
-            scan_bodyframe_pub_en: false                    # true: output the point cloud scans in IMU-body-frame
-            dense_publish_en: True                          # False: low down the points number in a global-frame point clouds scan.
-            tf_send_en: False                               # true: send transform from 'camera_init' to 'aft_mapped'
+            path_en: True                                   # False: close the path output
+            scan_publish_en: True                           # False: close all the point cloud output
+            scan_bodyframe_pub_en: False                    # True: output the point cloud scans in IMU-body-frame
+            dense_publish_en: False                         # False: low down the points number in a global-frame point clouds scan.
+            tf_send_en: True                                # True: send transform from 'camera_init' to 'aft_mapped'
 
         pcd_save:
-            pcd_save_en: false
+            pcd_save_en: False
             interval: -1                                    # how many LiDAR frames saved in each pcd file;
                                                             # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.
