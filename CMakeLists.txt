@@ -94,6 +94,9 @@ ament_target_dependencies(pointlio_mapping
 )
 
 target_link_libraries(pointlio_mapping ${PCL_LIBRARIES} ${PYTHON_LIBRARIES})
+if(OPENMP_FOUND)
+  target_link_libraries(pointlio_mapping OpenMP::OpenMP_CXX)
+endif()
 target_include_directories(pointlio_mapping PRIVATE ${PYTHON_INCLUDE_DIRS})
 
 # Install the executable
