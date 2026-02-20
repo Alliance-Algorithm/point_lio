@@ -19,7 +19,7 @@
 #include <numpy/arrayobject.h>
 
 #ifdef WITH_OPENCV
-#include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/cv_bridge.hpp>
 
 #include <opencv2/opencv.hpp>
 #endif  // WITH_OPENCV
