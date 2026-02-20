@@ -1,5 +1,14 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(point_lio)
+
+if(POLICY CMP0144)
+  cmake_policy(SET CMP0144 OLD)
+  set(CMAKE_POLICY_DEFAULT_CMP0144 OLD)
+endif()
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 OLD)
+  set(CMAKE_POLICY_DEFAULT_CMP0167 OLD)
+endif()
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -50,7 +59,7 @@ find_package(tf2_ros REQUIRED)
 find_package(livox_ros_driver2 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenMP QUIET)
-find_package(PythonLibs REQUIRED) # Consider using Pybind11 for ROS2
+find_package(Python3 REQUIRED COMPONENTS Development)
 find_path(MATPLOTLIB_CPP_INCLUDE_DIRS "matplotlibcpp.h")
 
 if(OPENMP_FOUND)
@@ -62,7 +71,7 @@ include_directories(
   include
   ${EIGEN3_INCLUDE_DIR}
   ${PCL_INCLUDE_DIRS}
-  ${PYTHON_INCLUDE_DIRS}
+  ${Python3_INCLUDE_DIRS}
 )
 
 link_directories(
@@ -93,11 +102,14 @@ ament_target_dependencies(pointlio_mapping
   livox_ros_driver2
 )
 
-target_link_libraries(pointlio_mapping ${PCL_LIBRARIES} ${PYTHON_LIBRARIES})
+target_link_libraries(pointlio_mapping ${PCL_LIBRARIES} ${Python3_LIBRARIES})
 if(OPENMP_FOUND)
   target_link_libraries(pointlio_mapping OpenMP::OpenMP_CXX)
 endif()
-target_include_directories(pointlio_mapping PRIVATE ${PYTHON_INCLUDE_DIRS})
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  target_compile_options(pointlio_mapping PRIVATE -Wno-tautological-constant-out-of-range-compare)
+endif()
+target_include_directories(pointlio_mapping PRIVATE ${Python3_INCLUDE_DIRS})
 
 # Install the executable
 install(TARGETS
