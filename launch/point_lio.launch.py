@@ -6,52 +6,55 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    remappings = [
-        ("/tf", "tf"),
-        ("/tf_static", "tf_static"),
-    ]
+    description = LaunchDescription()
 
-    namespace = LaunchConfiguration("namespace")
-    point_lio_cfg_dir = LaunchConfiguration("point_lio_cfg_dir")
-
-    point_lio_dir = get_package_share_directory("point_lio")
-
+    # Action: namespace
     declare_namespace = DeclareLaunchArgument(
         "namespace",
         default_value="",
         description="Namespace for the node",
     )
+    description.add_action(declare_namespace)
 
-    declare_point_lio_cfg_dir = DeclareLaunchArgument(
+    # Action: declare config
+    pkg_location = get_package_share_directory("point_lio")
+    config_path = DeclareLaunchArgument(
         "point_lio_cfg_dir",
         default_value=PathJoinSubstitution(
-            [point_lio_dir, "config", "mid360.yaml"]),
+            [pkg_location, "config", "mid360.yaml"]),
         description="Path to the Point-LIO config file",
     )
+    description.add_action(config_path)
 
-    start_point_lio_node = Node(
+    # Action: point-lio
+    remapping_links = [
+        ("/tf", "tf"),
+        ("/tf_static", "tf_static"),
+    ]
+    point_lio = Node(
         package="point_lio",
         executable="pointlio_mapping",
-        namespace=namespace,
-        parameters=[point_lio_cfg_dir],
-        remappings=remappings,
+        namespace=LaunchConfiguration("namespace"),
+        parameters=[LaunchConfiguration("point_lio_cfg_dir")],
+        remappings=remapping_links,
         output="screen",
     )
+    description.add_action(point_lio)
 
-    # TODO: Remove soon
-    static_tf_node = Node(
-        package="tf2_ros",
-        executable="static_transform_publisher",
-        name="static_transform_publisher",
-        arguments=["0", "0", "0.6", "0", "0", "0", "world", "camera_init"],
-        output="screen",
-    )
+    transform_args = [
+        # 处理雷达初始点和底盘初始点的变换
+        ["0", "0", "0.6", "0", "0", "0", "world", "camera_init"],
+        # 处理雷达系和底盘系的变换
+        ["0", "0", "0.6", "0", "3.1415", "0", "aft_mapped", "base_link"],
+    ]
+    for args in transform_args:
+        static_transform_node = Node(
+            package="tf2_ros",
+            executable="static_transform_publisher",
+            name="static_transform_publisher",
+            arguments=args,
+            output="screen",
+        )
+        description.add_action(static_transform_node)
 
-    ld = LaunchDescription()
-
-    ld.add_action(declare_namespace)
-    ld.add_action(declare_point_lio_cfg_dir)
-    ld.add_action(start_point_lio_node)
-    ld.add_action(static_tf_node)
-
-    return ld
+    return description
