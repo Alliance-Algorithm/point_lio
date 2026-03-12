@@ -78,6 +78,10 @@ extern double time_update_last, time_current, time_predict_last_const, t_last;
 extern MeasureGroup Measures;
 
 extern ofstream fout_out, fout_imu_pbp;
+
+extern Eigen::Vector3d init_pose_translation;
+extern Eigen::Vector3d init_pose_orientation;
+
 void readParameters(std::shared_ptr<rclcpp::Node>& n);
 void open_file();
 Eigen::Matrix<double, 3, 1> SO3ToEuler(const SO3& orient);

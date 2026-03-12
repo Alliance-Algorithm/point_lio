@@ -388,8 +388,66 @@ int main(int argc, char** argv) {
         nh->create_publisher<sensor_msgs::msg::PointCloud2>("Laser_map", 1000);
     auto pub_odom_aft_mapped =
         nh->create_publisher<nav_msgs::msg::Odometry>("aft_mapped_to_init", 1000);
+
     auto pub_path = nh->create_publisher<nav_msgs::msg::Path>("path", 1000);
     auto tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(nh);
+
+    // Export as standard link transform
+    const auto export_standard_transforms = [&] {
+        if (!tf_send_en)
+            return;
+
+        auto& translation = init_pose_translation;
+        auto& orientation = init_pose_orientation;
+
+        const double yaw = orientation(0) * std::numbers::pi / 180.0;
+        const double pitch = orientation(1) * std::numbers::pi / 180.0;
+        const double roll = orientation(2) * std::numbers::pi / 180.0;
+
+        const auto q_base_to_lidar = Eigen::Quaterniond{
+            Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ())
+            * Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY())
+            * Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX())};
+        const auto q_base_to_lidar_yaw_only =
+            Eigen::Quaterniond{Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ())};
+
+        const auto q_lidar_to_base = Eigen::Quaterniond{q_base_to_lidar.conjugate()};
+        const auto t_lidar_to_base =
+            Eigen::Vector3d{-(q_lidar_to_base.toRotationMatrix() * translation)};
+
+        auto transform = geometry_msgs::msg::TransformStamped{};
+        transform.header.stamp = odomAftMapped.header.stamp;
+        {
+            transform.header.frame_id = "aft_mapped";
+            transform.child_frame_id = "base_link";
+
+            transform.transform.translation.x = t_lidar_to_base.x();
+            transform.transform.translation.y = t_lidar_to_base.y();
+            transform.transform.translation.z = t_lidar_to_base.z();
+            transform.transform.rotation.w = q_lidar_to_base.w();
+            transform.transform.rotation.x = q_lidar_to_base.x();
+            transform.transform.rotation.y = q_lidar_to_base.y();
+            transform.transform.rotation.z = q_lidar_to_base.z();
+
+            tf_broadcaster->sendTransform(transform);
+        }
+        rclcpp::sleep_for(500ms);
+        {
+            transform.header.frame_id = "odom";
+            transform.child_frame_id = "camera_init";
+
+            transform.transform.translation.x = translation(0);
+            transform.transform.translation.y = translation(1);
+            transform.transform.translation.z = translation(2);
+            transform.transform.rotation.w = q_base_to_lidar_yaw_only.w();
+            transform.transform.rotation.x = q_base_to_lidar_yaw_only.x();
+            transform.transform.rotation.y = q_base_to_lidar_yaw_only.y();
+            transform.transform.rotation.z = q_base_to_lidar_yaw_only.z();
+
+            tf_broadcaster->sendTransform(transform);
+        }
+    };
+    auto _ = nh->create_wall_timer(1s, export_standard_transforms);
 
     //------------------------------------------------------------------------------------------------------
     signal(SIGINT, SigHandle);

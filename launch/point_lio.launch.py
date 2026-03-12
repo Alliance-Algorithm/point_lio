@@ -41,20 +41,4 @@ def generate_launch_description():
     )
     description.add_action(point_lio)
 
-    transform_args = [
-        # 处理雷达初始点和底盘初始点的变换
-        ["0", "0", "0.6", "0", "0", "0", "world", "camera_init"],
-        # 处理雷达系和底盘系的变换
-        ["0", "0", "0.6", "0", "3.1415", "0", "aft_mapped", "base_link"],
-    ]
-    for args in transform_args:
-        static_transform_node = Node(
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            name="static_transform_publisher",
-            arguments=args,
-            output="screen",
-        )
-        description.add_action(static_transform_node)
-
     return description

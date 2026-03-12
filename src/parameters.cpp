@@ -45,6 +45,9 @@ MeasureGroup Measures;
 
 ofstream fout_out, fout_imu_pbp;
 
+Eigen::Vector3d init_pose_translation = Eigen::Vector3d::Zero();
+Eigen::Vector3d init_pose_orientation = Eigen::Vector3d::Zero();
+
 void readParameters(std::shared_ptr<rclcpp::Node>& nh) {
     p_pre.reset(new Preprocess());
     p_imu.reset(new ImuProcess());
@@ -84,6 +87,37 @@ void readParameters(std::shared_ptr<rclcpp::Node>& nh) {
 
         nh->declare_parameter<std::string>("common.imu_topic", ".livox.imu");
         nh->get_parameter("common.imu_topic", imu_topic);
+
+        std::vector<double> init_pose_translation_param(3, 0.0);
+        std::vector<double> init_pose_orientation_param(3, 0.0);
+        nh->declare_parameter<std::vector<double>>(
+            "common.init_pose.translation", std::vector<double>{0.0, 0.0, 0.0});
+        nh->get_parameter("common.init_pose.translation", init_pose_translation_param);
+        nh->declare_parameter<std::vector<double>>(
+            "common.init_pose.orientation", std::vector<double>{0.0, 0.0, 0.0});
+        nh->get_parameter("common.init_pose.orientation", init_pose_orientation_param);
+
+        if (init_pose_translation_param.size() == 3) {
+            init_pose_translation << init_pose_translation_param[0], init_pose_translation_param[1],
+                init_pose_translation_param[2];
+        } else {
+            RCLCPP_WARN(
+                nh->get_logger(),
+                "Parameter common.init_pose.translation expects 3 values, got %zu. Use zeros.",
+                init_pose_translation_param.size());
+            init_pose_translation.setZero();
+        }
+
+        if (init_pose_orientation_param.size() == 3) {
+            init_pose_orientation << init_pose_orientation_param[0], init_pose_orientation_param[1],
+                init_pose_orientation_param[2];
+        } else {
+            RCLCPP_WARN(
+                nh->get_logger(),
+                "Parameter common.init_pose.orientation expects 3 values, got %zu. Use zeros.",
+                init_pose_orientation_param.size());
+            init_pose_orientation.setZero();
+        }
 
         nh->declare_parameter<bool>("common.con_frame", false);
         nh->get_parameter("common.con_frame", con_frame);
@@ -214,6 +248,7 @@ void readParameters(std::shared_ptr<rclcpp::Node>& nh) {
 
         nh->declare_parameter<int>("ivox_nearby_type", 18);
         nh->get_parameter("ivox_nearby_type", ivox_nearby_type);
+
     } catch (const rclcpp::ParameterTypeException& e) {
         RCLCPP_ERROR(nh->get_logger(), "Parameter type exception: %s", e.what());
     } catch (const std::exception& e) {
@@ -229,7 +264,7 @@ void readParameters(std::shared_ptr<rclcpp::Node>& nh) {
     } else if (ivox_nearby_type == 26) {
         ivox_options_.nearby_type_ = IVoxType::NearbyType::NEARBY26;
     } else {
-        // LOG(WARNING) << "unknown ivox_nearby_type, use NEARBY18";
+        RCLCPP_WARN(nh->get_logger(), "unknown ivox_nearby_type, use NEARBY18");
         ivox_options_.nearby_type_ = IVoxType::NearbyType::NEARBY18;
     }
     p_imu->gravity_ << VEC_FROM_ARRAY(gravity);
