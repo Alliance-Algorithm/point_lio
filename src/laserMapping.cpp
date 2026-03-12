@@ -1,5 +1,4 @@
-// #include <so3_math.h>
-#include <malloc.h>
+#include <atomic>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
@@ -10,7 +9,9 @@
 
 #include <nav_msgs/msg/odometry.hpp>
 #include <nav_msgs/msg/path.hpp>
+#include <std_srvs/srv/trigger.hpp>
 
+#include "collection.h"
 #include "li_initialization.h"
 
 using namespace std;
@@ -167,6 +168,7 @@ void publish_init_map(
 
 PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI(500000, 1));
 PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
+
 void publish_frame_world(
     const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr& pubLaserCloudFullRes) {
     if (scan_pub_en) {
@@ -176,28 +178,6 @@ void publish_frame_world(
         laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
         laserCloudmsg.header.frame_id = "camera_init";
         pubLaserCloudFullRes->publish(laserCloudmsg);
-
-        //--------------------------save map-----------------------------------
-        // 1. make sure you have enough memories
-        // 2. noted that pcd save will influence the real-time performances
-        if (pcd_save_en) {
-            *pcl_wait_save += *feats_down_world;
-
-            static int scan_wait_num = 0;
-            scan_wait_num++;
-            if (!pcl_wait_save->empty() && pcd_save_interval > 0
-                && scan_wait_num >= pcd_save_interval) {
-                pcd_index++;
-                string all_points_dir(
-                    string(string(ROOT_DIR) + "PCD/scans_") + to_string(pcd_index)
-                    + string(".pcd"));
-                pcl::PCDWriter pcd_writer;
-                std::cout << "current scan saved to /PCD/" << all_points_dir << '\n';
-                pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
-                pcl_wait_save->clear();
-                scan_wait_num = 0;
-            }
-        }
     }
 }
 
@@ -459,9 +439,24 @@ int main(int argc, char** argv) {
         nh->create_wall_timer(1s, export_aft_mapped_to_base_link);
     auto timer_export_odom_to_camera_init = nh->create_wall_timer(1s, export_odom_to_camera_init);
 
+    auto collection = point_lio::Collection{};
+    collection.set_time_limit(20min);
+    collection.set_saving_path(std::filesystem::path{pcd_saving_path});
+    collection.start_timing();
+
+    auto save_collection_requested = std::make_shared<std::atomic_bool>(false);
+    auto save_pcd_service = nh->create_service<std_srvs::srv::Trigger>(
+        "save_pcd_map", [&](const std::shared_ptr<std_srvs::srv::Trigger::Request>&,
+                            const std::shared_ptr<std_srvs::srv::Trigger::Response>& response) {
+            save_collection_requested->store(true);
+            response->success = true;
+            response->message = "Save request accepted, check path " + pcd_saving_path;
+        });
+
     //------------------------------------------------------------------------------------------------------
     signal(SIGINT, SigHandle);
     rclcpp::Rate rate(500);
+
     while (rclcpp::ok()) {
         if (flg_exit)
             break;
@@ -1067,14 +1062,21 @@ int main(int argc, char** argv) {
 
             t5 = omp_get_wtime();
             /******* Publish points *******/
+
             if (path_en)
                 publish_path(pub_path);
-            if (scan_pub_en || pcd_save_en)
+            if (scan_pub_en)
                 publish_frame_world(pub_laser_cloud_full_res);
             if (scan_pub_en && scan_body_pub_en)
                 publish_frame_body(pub_laser_cloud_full_res_body);
             if (scan_pub_en)
                 publish_frame_world_undistort(pub_laser_cloud_full_res_undistort);
+
+            collection.spin(*feats_down_world);
+            if (save_collection_requested->exchange(false)) {
+                const auto filename = collection.save_once();
+                RCLCPP_INFO(LOGGER, "Map has been saved to: %s", filename.string().c_str());
+            }
 
             /*** Debug variables Logging ***/
             if (runtime_pos_log) {
@@ -1130,16 +1132,9 @@ int main(int argc, char** argv) {
         }
         rate.sleep();
     }
-    //--------------------------save map-----------------------------------
-    /* 1. make sure you have enough memories
-      /* 2. noted that pcd save will influence the real-time performences **/
-    if (pcl_wait_save->size() > 0 && pcd_save_en) {
-        string file_name = string("scans.pcd");
-        string all_points_dir(string(string(ROOT_DIR) + "PCD/") + file_name);
-        pcl::PCDWriter pcd_writer;
-        pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
-    }
+
     fout_out.close();
     fout_imu_pbp.close();
+
     return 0;
 }

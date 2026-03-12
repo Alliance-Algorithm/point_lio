@@ -28,6 +28,7 @@ double vel_cov, acc_cov_input, gyr_cov_input;
 double gyr_cov_output, acc_cov_output, b_gyr_cov, b_acc_cov;
 double imu_meas_acc_cov, imu_meas_omg_cov;
 int lidar_type, pcd_save_interval;
+std::string pcd_saving_path;
 std::vector<double> gravity_init, gravity;
 bool runtime_pos_log, pcd_save_en, path_en, extrinsic_est_en = true;
 bool scan_pub_en, scan_body_pub_en, tf_send_en;
@@ -239,6 +240,9 @@ void readParameters(std::shared_ptr<rclcpp::Node>& nh) {
 
         nh->declare_parameter<int>("pcd_save.interval", -1);
         nh->get_parameter("pcd_save.interval", pcd_save_interval);
+
+        nh->declare_parameter<std::string>("pcd_save.saving_path", "/tmp/point-lio/");
+        nh->get_parameter("pcd_save.saving_path", pcd_saving_path);
 
         nh->declare_parameter<double>("mapping.lidar_time_inte", 0.1);
         nh->get_parameter("mapping.lidar_time_inte", lidar_time_inte);
