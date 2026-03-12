@@ -17,7 +17,7 @@
       # 从 base_link 到 lidar_link 的变换
       init_pose:
         translation: [+0.12, -0.12, +0.30]
-        orientation: [-32.0, 25.0, 0.0]
+        orientation: [-30.0, 30.0, 0.0]
       con_frame: false  # true: if you need to combine several LiDAR frames into one
       con_frame_num: 1  # the number of frames combined
       cut_frame: false  # true: if you need to cut one LiDAR frame into several subframes
