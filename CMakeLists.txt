@@ -56,6 +56,7 @@ find_package(visualization_msgs REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(livox_ros_driver2 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenMP QUIET)
@@ -99,6 +100,7 @@ ament_target_dependencies(pointlio_mapping
   pcl_ros
   pcl_conversions
   tf2_ros
+  std_srvs
   livox_ros_driver2
 )
 
@@ -132,6 +134,7 @@ ament_export_dependencies(
   pcl_ros
   pcl_conversions
   tf2_ros
+  std_srvs
   livox_ros_driver2
   Eigen3
   PCL
