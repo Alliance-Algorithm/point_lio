@@ -4,6 +4,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -371,6 +372,7 @@ int main(int argc, char** argv) {
 
     auto pub_path = nh->create_publisher<nav_msgs::msg::Path>("path", 1000);
     auto tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(nh);
+    auto static_tf_broadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(nh);
 
     // Export as standard link transform
     const auto export_aft_mapped_to_base_link = [&] {
@@ -394,7 +396,7 @@ int main(int argc, char** argv) {
             Eigen::Vector3d{-(q_lidar_to_base.toRotationMatrix() * translation)};
 
         auto transform = geometry_msgs::msg::TransformStamped{};
-        transform.header.stamp = odomAftMapped.header.stamp;
+        transform.header.stamp = nh->now();
         transform.header.frame_id = "aft_mapped";
         transform.child_frame_id = "base_link";
 
@@ -406,7 +408,7 @@ int main(int argc, char** argv) {
         transform.transform.rotation.y = q_lidar_to_base.y();
         transform.transform.rotation.z = q_lidar_to_base.z();
 
-        tf_broadcaster->sendTransform(transform);
+        static_tf_broadcaster->sendTransform(transform);
     };
 
     const auto export_odom_to_camera_init = [&] {
@@ -420,7 +422,7 @@ int main(int argc, char** argv) {
             Eigen::Quaterniond{Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ())};
 
         auto transform = geometry_msgs::msg::TransformStamped{};
-        transform.header.stamp = odomAftMapped.header.stamp;
+        transform.header.stamp = nh->now();
         transform.header.frame_id = "odom";
         transform.child_frame_id = "camera_init";
 
@@ -432,12 +434,11 @@ int main(int argc, char** argv) {
         transform.transform.rotation.y = q_base_to_lidar_yaw_only.y();
         transform.transform.rotation.z = q_base_to_lidar_yaw_only.z();
 
-        tf_broadcaster->sendTransform(transform);
+        static_tf_broadcaster->sendTransform(transform);
     };
 
-    auto timer_export_aft_mapped_to_base_link =
-        nh->create_wall_timer(1s, export_aft_mapped_to_base_link);
-    auto timer_export_odom_to_camera_init = nh->create_wall_timer(1s, export_odom_to_camera_init);
+    export_aft_mapped_to_base_link();
+    export_odom_to_camera_init();
 
     auto collection = point_lio::Collection{};
     collection.set_time_limit(20min);
