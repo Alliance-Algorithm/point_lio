@@ -1,10 +1,12 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <ctime>
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
+#include <thread>
 
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
@@ -18,6 +20,16 @@ struct Collection {
     using Clock = std::chrono::steady_clock;
 
     auto spin(const Cloud& input) -> void {
+        if (is_saving.load()) {
+            return;
+        }
+
+        active_spins.fetch_add(1);
+        if (is_saving.load()) {
+            active_spins.fetch_sub(1);
+            return;
+        }
+
         if (timing_started && time_limit.count() > 0) {
             const auto now = Clock::now();
             if (now - started_at >= time_limit) {
@@ -27,13 +39,12 @@ struct Collection {
         }
 
         if (!collecting_enabled) {
+            active_spins.fetch_sub(1);
             return;
         }
 
-        if (!accumulation) {
-            accumulation = std::make_shared<Cloud>();
-        }
         *accumulation += input;
+        active_spins.fetch_sub(1);
     }
 
     auto set_saving_path(const std::filesystem::path& path) -> void {
@@ -56,7 +67,19 @@ struct Collection {
         collecting_enabled = true;
     }
 
-    auto save_once() noexcept {
+    auto try_start_saving() -> bool {
+        auto expected = false;
+        return is_saving.compare_exchange_strong(expected, true);
+    }
+
+    auto save_once() {
+        struct SavingGuard {
+            std::atomic<bool>& is_saving;
+            ~SavingGuard() {
+                is_saving.store(false);
+            }
+        } guard{is_saving};
+
         auto now = std::chrono::system_clock::now();
         auto current_time = std::chrono::system_clock::to_time_t(now);
         auto local_tm = *std::localtime(&current_time);
@@ -70,30 +93,34 @@ struct Collection {
 
         auto filename = saving_path;
         filename /= filename_builder.str();
-        save_to(filename);
+
+        while (active_spins.load() != 0) {
+            std::this_thread::yield();
+        }
+
+        auto cloud_to_save = accumulation;
+        accumulation = std::make_shared<Cloud>();
+        if (!cloud_to_save || cloud_to_save->empty()) {
+            return filename;
+        }
+
+        std::filesystem::create_directories(filename.parent_path());
+        pcl::io::savePCDFileBinary(filename.string(), *cloud_to_save);
 
         return filename;
     }
 
 private:
-    std::shared_ptr<Cloud> accumulation;
+    std::shared_ptr<Cloud> accumulation{std::make_shared<Cloud>()};
     std::filesystem::path saving_path{"/tmp/point_lio_collection"};
 
     std::chrono::seconds time_limit{0};
     Clock::time_point started_at{};
 
+    std::atomic<bool> is_saving{false};
+    std::atomic<int> active_spins{0};
     bool timing_started = false;
     bool collecting_enabled = true;
-
-    auto save_to(const std::filesystem::path& filename) -> void {
-
-        if (!accumulation || accumulation->size() == 0) {
-            return;
-        }
-
-        std::filesystem::create_directories(filename.parent_path());
-        pcl::io::savePCDFileBinary(filename.string(), *accumulation);
-    }
 };
 
 } // namespace point_lio

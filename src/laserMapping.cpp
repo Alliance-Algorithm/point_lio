@@ -7,6 +7,7 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
+#include <thread>
 
 #include <nav_msgs/msg/odometry.hpp>
 #include <nav_msgs/msg/path.hpp>
@@ -440,29 +441,54 @@ int main(int argc, char** argv) {
     export_aft_mapped_to_base_link();
     export_odom_to_camera_init();
 
-    auto collection = point_lio::Collection{};
-    collection.set_time_limit(20min);
-    collection.set_saving_path(std::filesystem::path{pcd_saving_path});
-    collection.start_timing();
+    auto collection = std::make_shared<point_lio::Collection>();
+    collection->set_time_limit(20min);
+    collection->set_saving_path(std::filesystem::path{pcd_saving_path});
+    collection->start_timing();
 
-    auto save_collection_requested = std::make_shared<std::atomic_bool>(false);
     auto save_pcd_service = nh->create_service<std_srvs::srv::Trigger>(
-        "save_pcd_map", [&](const std::shared_ptr<std_srvs::srv::Trigger::Request>&,
+        "save_pcd_map", [&](const std::shared_ptr<std_srvs::srv::Trigger::Request>& request,
                             const std::shared_ptr<std_srvs::srv::Trigger::Response>& response) {
-            save_collection_requested->store(true);
+            std::ignore = request;
+            if (!collection->try_start_saving()) {
+                response->success = false;
+                response->message = "Save request rejected, map saving is in progress";
+                return;
+            }
+
             response->success = true;
             response->message = "Save request accepted, check path " + pcd_saving_path;
+
+            std::thread([collection] {
+                const auto filename = collection->save_once();
+                RCLCPP_INFO(LOGGER, "Map has been saved to: %s", filename.string().c_str());
+            }).detach();
         });
 
-    //------------------------------------------------------------------------------------------------------
     signal(SIGINT, SigHandle);
     rclcpp::Rate rate(500);
 
-    while (rclcpp::ok()) {
-        if (flg_exit)
-            break;
+    ///
+    /// Main Loop
+    ///
+
+    while (rclcpp::ok() && !flg_exit) {
         executor.spin_some();
+
         if (sync_packages(Measures)) {
+
+            // TODO:
+            // 将点云和 IMU 数据纠正到 base_link
+            // 补偿初始变换
+            {
+                const auto t = init_pose_translation;
+                const auto q = init_pose_orientation;
+
+                auto& package = Measures;
+                auto& imu = package.imu;
+                auto& lid = package.lidar;
+            }
+
             if (flg_reset) {
                 RCLCPP_WARN(LOGGER, "reset when rosbag play back");
                 p_imu->Reset();
@@ -1073,11 +1099,7 @@ int main(int argc, char** argv) {
             if (scan_pub_en)
                 publish_frame_world_undistort(pub_laser_cloud_full_res_undistort);
 
-            collection.spin(*feats_down_world);
-            if (save_collection_requested->exchange(false)) {
-                const auto filename = collection.save_once();
-                RCLCPP_INFO(LOGGER, "Map has been saved to: %s", filename.string().c_str());
-            }
+            collection->spin(*feats_down_world);
 
             /*** Debug variables Logging ***/
             if (runtime_pos_log) {
