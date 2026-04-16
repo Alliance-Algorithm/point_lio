@@ -1,20 +1,21 @@
+#include "collection.h"
+#include "li_initialization.h"
+#include "util/transform.hpp"
+
 #include <atomic>
+#include <thread>
+
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
-#include <thread>
 
 #include <nav_msgs/msg/odometry.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <std_srvs/srv/trigger.hpp>
-
-#include "collection.h"
-#include "li_initialization.h"
 
 using namespace std;
 
@@ -164,7 +165,7 @@ void publish_init_map(
     pcl::toROSMsg(*init_feats_world, laserCloudmsg);
 
     laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
-    laserCloudmsg.header.frame_id = "camera_init";
+    laserCloudmsg.header.frame_id = "odom";
     pubLaserCloudFullRes->publish(laserCloudmsg);
 }
 
@@ -178,7 +179,7 @@ void publish_frame_world(
         pcl::toROSMsg(*feats_down_world, laserCloudmsg);
 
         laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
-        laserCloudmsg.header.frame_id = "camera_init";
+        laserCloudmsg.header.frame_id = "odom";
         pubLaserCloudFullRes->publish(laserCloudmsg);
     }
 }
@@ -195,7 +196,7 @@ void publish_frame_body(
     sensor_msgs::msg::PointCloud2 laserCloudmsg;
     pcl::toROSMsg(*laserCloudIMUBody, laserCloudmsg);
     laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
-    laserCloudmsg.header.frame_id = "body";
+    laserCloudmsg.header.frame_id = "base_link";
     pubLaserCloudFull_body->publish(laserCloudmsg);
 }
 
@@ -215,7 +216,7 @@ void publish_frame_world_undistort(
         pcl::toROSMsg(*feats_undistort_world, laserCloudmsg);
 
         laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
-        laserCloudmsg.header.frame_id = "camera_init";
+        laserCloudmsg.header.frame_id = "odom";
         pubLaserCloudFullResUndistort->publish(laserCloudmsg);
     }
 }
@@ -246,8 +247,8 @@ void set_posestamp(T& out) {
 void publish_odometry(
     const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr& pubOdomAftMapped,
     std::shared_ptr<tf2_ros::TransformBroadcaster>& tf_br) {
-    odomAftMapped.header.frame_id = "camera_init";
-    odomAftMapped.child_frame_id = "body";
+    odomAftMapped.header.frame_id = "odom";
+    odomAftMapped.child_frame_id = "base_link";
     if (publish_odometry_without_downsample) {
         odomAftMapped.header.stamp = get_ros_time(time_current);
     } else {
@@ -259,8 +260,8 @@ void publish_odometry(
 
     if (tf_send_en) {
         geometry_msgs::msg::TransformStamped transform;
-        transform.header.frame_id = "camera_init";
-        transform.child_frame_id = "aft_mapped";
+        transform.header.frame_id = "odom";
+        transform.child_frame_id = "base_link";
         transform.transform.translation.x = odomAftMapped.pose.pose.position.x;
         transform.transform.translation.y = odomAftMapped.pose.pose.position.y;
         transform.transform.translation.z = odomAftMapped.pose.pose.position.z;
@@ -277,7 +278,7 @@ void publish_path(const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr pubPat
     set_posestamp(msg_body_pose.pose);
     // msg_body_pose.header.stamp = ros::Time::now();
     msg_body_pose.header.stamp = get_ros_time(lidar_end_time);
-    msg_body_pose.header.frame_id = "camera_init";
+    msg_body_pose.header.frame_id = "odom";
     static int jjj = 0;
     jjj++;
     // if (jjj % 2 == 0) // if path is too large, the rvis will crash
@@ -299,7 +300,7 @@ int main(int argc, char** argv) {
     ivox_ = std::make_shared<IVoxType>(ivox_options_);
 
     path.header.stamp = get_ros_time(lidar_end_time);
-    path.header.frame_id = "camera_init";
+    path.header.frame_id = "odom";
 
     /*** variables definition for counting ***/
     int frame_num = 0;
@@ -368,78 +369,10 @@ int main(int argc, char** argv) {
         nh->create_publisher<sensor_msgs::msg::PointCloud2>("cloud_effected", 1000);
     auto pub_laser_cloud_map =
         nh->create_publisher<sensor_msgs::msg::PointCloud2>("Laser_map", 1000);
-    auto pub_odom_aft_mapped =
-        nh->create_publisher<nav_msgs::msg::Odometry>("aft_mapped_to_init", 1000);
+    auto pub_odom_aft_mapped = nh->create_publisher<nav_msgs::msg::Odometry>("odom", 1000);
 
     auto pub_path = nh->create_publisher<nav_msgs::msg::Path>("path", 1000);
     auto tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(nh);
-    auto static_tf_broadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(nh);
-
-    // Export as standard link transform
-    const auto export_aft_mapped_to_base_link = [&] {
-        if (!tf_send_en)
-            return;
-
-        auto& translation = init_pose_translation;
-        auto& orientation = init_pose_orientation;
-
-        const double yaw = orientation(0) * std::numbers::pi / 180.0;
-        const double pitch = orientation(1) * std::numbers::pi / 180.0;
-        const double roll = orientation(2) * std::numbers::pi / 180.0;
-
-        const auto q_base_to_lidar = Eigen::Quaterniond{
-            Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ())
-            * Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY())
-            * Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX())};
-
-        const auto q_lidar_to_base = Eigen::Quaterniond{q_base_to_lidar.conjugate()};
-        const auto t_lidar_to_base =
-            Eigen::Vector3d{-(q_lidar_to_base.toRotationMatrix() * translation)};
-
-        auto transform = geometry_msgs::msg::TransformStamped{};
-        transform.header.stamp = nh->now();
-        transform.header.frame_id = "aft_mapped";
-        transform.child_frame_id = "base_link";
-
-        transform.transform.translation.x = t_lidar_to_base.x();
-        transform.transform.translation.y = t_lidar_to_base.y();
-        transform.transform.translation.z = t_lidar_to_base.z();
-        transform.transform.rotation.w = q_lidar_to_base.w();
-        transform.transform.rotation.x = q_lidar_to_base.x();
-        transform.transform.rotation.y = q_lidar_to_base.y();
-        transform.transform.rotation.z = q_lidar_to_base.z();
-
-        static_tf_broadcaster->sendTransform(transform);
-    };
-
-    const auto export_odom_to_camera_init = [&] {
-        if (!tf_send_en)
-            return;
-
-        auto& translation = init_pose_translation;
-        auto& orientation = init_pose_orientation;
-        const double yaw = orientation(0) * std::numbers::pi / 180.0;
-        const auto q_base_to_lidar_yaw_only =
-            Eigen::Quaterniond{Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ())};
-
-        auto transform = geometry_msgs::msg::TransformStamped{};
-        transform.header.stamp = nh->now();
-        transform.header.frame_id = "odom";
-        transform.child_frame_id = "camera_init";
-
-        transform.transform.translation.x = translation(0);
-        transform.transform.translation.y = translation(1);
-        transform.transform.translation.z = translation(2);
-        transform.transform.rotation.w = q_base_to_lidar_yaw_only.w();
-        transform.transform.rotation.x = q_base_to_lidar_yaw_only.x();
-        transform.transform.rotation.y = q_base_to_lidar_yaw_only.y();
-        transform.transform.rotation.z = q_base_to_lidar_yaw_only.z();
-
-        static_tf_broadcaster->sendTransform(transform);
-    };
-
-    export_aft_mapped_to_base_link();
-    export_odom_to_camera_init();
 
     auto collection = std::make_shared<point_lio::Collection>();
     collection->set_time_limit(20min);
@@ -476,17 +409,114 @@ int main(int argc, char** argv) {
         executor.spin_some();
 
         if (sync_packages(Measures)) {
-
-            // TODO:
-            // 将点云和 IMU 数据纠正到 base_link
-            // 补偿初始变换
             {
-                const auto t = init_pose_translation;
-                const auto q = init_pose_orientation;
+                using namespace point_lio;
 
-                auto& package = Measures;
-                auto& imu = package.imu;
-                auto& lid = package.lidar;
+                // 计算 base_link 相对 lidar 的初始变换
+                const auto base_from_lidar_rotation =
+                    util::Quaternion<double>::from_angle(init_pose_orientation).toRotationMatrix();
+                const auto base_from_lidar_translation = init_pose_translation;
+
+                // 读取 lidar 相对 imu 的外参
+                auto lidar_to_imu_rotation = Eigen::Matrix3d{};
+                lidar_to_imu_rotation << extrinR[0], extrinR[1], extrinR[2], extrinR[3], extrinR[4],
+                    extrinR[5], extrinR[6], extrinR[7], extrinR[8];
+
+                auto lidar_in_imu_translation = Eigen::Vector3d{};
+                lidar_in_imu_translation << extrinT[0], extrinT[1], extrinT[2];
+
+                // 推出 imu 相对 base_link 的旋转和平移
+                const auto base_from_imu_rotation =
+                    base_from_lidar_rotation * lidar_to_imu_rotation.transpose();
+
+                const auto imu_in_base_translation =
+                    base_from_lidar_translation - base_from_imu_rotation * lidar_in_imu_translation;
+
+                const auto imu_to_base_lever_arm = -imu_in_base_translation;
+
+                // 点云直接转到 base_link
+                for (auto& point : Measures.lidar->points) {
+                    const auto point_in_lidar = util::Vector3<double>::from_xyz(point);
+
+                    const auto point_in_base =
+                        base_from_lidar_rotation * point_in_lidar + base_from_lidar_translation;
+
+                    util::Vector3<double>{point_in_base}.sync_xyz(point);
+                }
+
+                // 为角加速度补偿保留上一帧角速度
+                auto has_prev_angular_velocity = false;
+                auto prev_angular_velocity = Eigen::Vector3d{};
+                auto prev_imu_time = 0.0;
+
+                const auto transform_imu =
+                    [&](std::deque<std::shared_ptr<const sensor_msgs::msg::Imu>>& data) {
+                        for (auto& imu : data) {
+                            if (imu->header.frame_id != "base_link") {
+                                auto corrected_imu = std::make_shared<sensor_msgs::msg::Imu>(*imu);
+
+                                auto angular_velocity = Eigen::Vector3d{
+                                    base_from_imu_rotation
+                                    * util::Vector3<double>::from_xyz(imu->angular_velocity)};
+
+                                auto linear_acceleration = Eigen::Vector3d{
+                                    base_from_imu_rotation
+                                    * util::Vector3<double>::from_xyz(imu->linear_acceleration)};
+
+                                const auto imu_time = get_time_sec(imu->header.stamp);
+                                auto angular_acceleration =
+                                    Eigen::Vector3d{Eigen::Vector3d::Zero()};
+
+                                if (has_prev_angular_velocity && imu_time > prev_imu_time) {
+                                    angular_acceleration =
+                                        (angular_velocity - prev_angular_velocity)
+                                        / (imu_time - prev_imu_time);
+                                }
+
+                                // 补上杆臂带来的附加加速度
+                                const auto lever_arm_acceleration =
+                                    angular_acceleration.cross(imu_to_base_lever_arm)
+                                    + angular_velocity.cross(
+                                        angular_velocity.cross(imu_to_base_lever_arm));
+
+                                linear_acceleration += lever_arm_acceleration * acc_norm / G_m_s2;
+
+                                util::Vector3<double>{angular_velocity}.sync_xyz(
+                                    corrected_imu->angular_velocity);
+
+                                util::Vector3<double>{linear_acceleration}.sync_xyz(
+                                    corrected_imu->linear_acceleration);
+
+                                corrected_imu->header.frame_id = "base_link";
+                                imu = corrected_imu;
+                            }
+
+                            // 更新上一帧角速度
+                            prev_angular_velocity =
+                                util::Vector3<double>::from_xyz(imu->angular_velocity);
+                            prev_imu_time = get_time_sec(imu->header.stamp);
+                            has_prev_angular_velocity = true;
+                        }
+                    };
+                transform_imu(Measures.imu);
+                transform_imu(imu_deque);
+
+                // 同步首尾 imu
+                if (!Measures.imu.empty()) {
+                    imu_last = *Measures.imu.back();
+                }
+
+                if (!imu_deque.empty()) {
+                    imu_next = *imu_deque.front();
+                }
+
+                // 后续流程直接按 base_link 处理
+                Lidar_R_wrt_IMU = Eye3d;
+                Lidar_T_wrt_IMU = Zero3d;
+                kf_input.x_.offset_R_L_I = Eye3d;
+                kf_input.x_.offset_T_L_I = Zero3d;
+                kf_output.x_.offset_R_L_I = Eye3d;
+                kf_output.x_.offset_T_L_I = Zero3d;
             }
 
             if (flg_reset) {
