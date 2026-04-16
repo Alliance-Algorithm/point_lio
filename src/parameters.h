@@ -13,7 +13,6 @@
 #include <condition_variable>
 #include <csignal>
 #include <cstring>
-#include <fstream>
 #include <geometry_msgs/msg/vector3.hpp>
 #include <livox_ros_driver2/msg/custom_msg.hpp>
 #include <mutex>
@@ -25,8 +24,6 @@
 
 #include "IMU_Processing.h"
 #include "preprocess.h"
-
-// #define IVOX_NODE_TYPE_PHC
 
 #ifdef IVOX_NODE_TYPE_PHC
 using IVoxType = faster_lio::IVox<3, faster_lio::IVoxNodeType::PHC, PointType>;
@@ -61,7 +58,7 @@ extern double imu_meas_acc_cov, imu_meas_omg_cov;
 extern int lidar_type, pcd_save_interval;
 extern std::string pcd_saving_path;
 extern std::vector<double> gravity_init, gravity;
-extern bool runtime_pos_log, pcd_save_en, path_en;
+extern bool pcd_save_en, path_en;
 extern bool scan_pub_en, scan_body_pub_en, tf_send_en;
 extern shared_ptr<Preprocess> p_pre;
 extern shared_ptr<ImuProcess> p_imu;
@@ -78,13 +75,10 @@ extern double time_update_last, time_current, time_predict_last_const, t_last;
 
 extern MeasureGroup Measures;
 
-extern ofstream fout_out, fout_imu_pbp;
-
 extern Eigen::Vector3d init_pose_translation;
 extern Eigen::Vector3d init_pose_orientation;
 
 void readParameters(std::shared_ptr<rclcpp::Node>& n);
-void open_file();
 Eigen::Matrix<double, 3, 1> SO3ToEuler(const SO3& orient);
 void reset_cov(Eigen::Matrix<double, 24, 24>& P_init);
 void reset_cov_output(Eigen::Matrix<double, 30, 30>& P_init_output);

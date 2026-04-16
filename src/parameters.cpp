@@ -30,7 +30,7 @@ double imu_meas_acc_cov, imu_meas_omg_cov;
 int lidar_type, pcd_save_interval;
 std::string pcd_saving_path;
 std::vector<double> gravity_init, gravity;
-bool runtime_pos_log, pcd_save_en, path_en, extrinsic_est_en = true;
+bool pcd_save_en, path_en, extrinsic_est_en = true;
 bool scan_pub_en, scan_body_pub_en, tf_send_en;
 shared_ptr<Preprocess> p_pre;
 shared_ptr<ImuProcess> p_imu;
@@ -43,8 +43,6 @@ double online_refine_time = 20.0; // unit: s
 bool cut_frame_init = false;      // true;
 
 MeasureGroup Measures;
-
-ofstream fout_out, fout_imu_pbp;
 
 Eigen::Vector3d init_pose_translation = Eigen::Vector3d::Zero();
 Eigen::Vector3d init_pose_orientation = Eigen::Vector3d::Zero();
@@ -232,9 +230,6 @@ void readParameters(std::shared_ptr<rclcpp::Node>& nh) {
         nh->declare_parameter<bool>("publish.tf_send_en", true);
         nh->get_parameter("publish.tf_send_en", tf_send_en);
 
-        nh->declare_parameter<bool>("runtime_pos_log_enable", false);
-        nh->get_parameter("runtime_pos_log_enable", runtime_pos_log);
-
         nh->declare_parameter<bool>("pcd_save.pcd_save_en", false);
         nh->get_parameter("pcd_save.pcd_save_en", pcd_save_en);
 
@@ -271,7 +266,7 @@ void readParameters(std::shared_ptr<rclcpp::Node>& nh) {
         RCLCPP_WARN(nh->get_logger(), "unknown ivox_nearby_type, use NEARBY18");
         ivox_options_.nearby_type_ = IVoxType::NearbyType::NEARBY18;
     }
-    p_imu->gravity_ << VEC_FROM_ARRAY(gravity);
+    p_imu->gravity_ = vector3d_from_array(gravity);
 }
 
 Eigen::Matrix<double, 3, 1> SO3ToEuler(const SO3& rot) {
@@ -291,24 +286,14 @@ Eigen::Matrix<double, 3, 1> SO3ToEuler(const SO3& rot) {
     return ang;
 }
 
-void open_file() {
-    fout_out.open(DEBUG_FILE_DIR("mat_out.txt"), ios::out);
-    fout_imu_pbp.open(DEBUG_FILE_DIR("imu_pbp.txt"), ios::out);
-    if (fout_out && fout_imu_pbp)
-        std::cout << "~~~~" << ROOT_DIR << " file opened" << '\n';
-    else
-        std::cout << "~~~~" << ROOT_DIR << " doesn't exist" << '\n';
-}
-
 void reset_cov(Eigen::Matrix<double, 24, 24>& P_init) {
-    P_init = MD(24, 24)::Identity() * 0.1;
-    P_init.block<3, 3>(21, 21) = MD(3, 3)::Identity() * 0.0001;
-    P_init.block<6, 6>(15, 15) = MD(6, 6)::Identity() * 0.001;
+    P_init = Matrixd<24, 24>::Identity() * 0.1;
+    P_init.block<3, 3>(21, 21) = Matrixd<3, 3>::Identity() * 0.0001;
+    P_init.block<6, 6>(15, 15) = Matrixd<6, 6>::Identity() * 0.001;
 }
 
 void reset_cov_output(Eigen::Matrix<double, 30, 30>& P_init_output) {
-    P_init_output = MD(30, 30)::Identity() * 0.01;
-    P_init_output.block<3, 3>(21, 21) = MD(3, 3)::Identity() * 0.0001;
-    // P_init_output.block<6, 6>(6, 6) = MD(6,6)::Identity() * 0.0001;
-    P_init_output.block<6, 6>(24, 24) = MD(6, 6)::Identity() * 0.001;
+    P_init_output = Matrixd<30, 30>::Identity() * 0.01;
+    P_init_output.block<3, 3>(21, 21) = Matrixd<3, 3>::Identity() * 0.0001;
+    P_init_output.block<6, 6>(24, 24) = Matrixd<6, 6>::Identity() * 0.001;
 }

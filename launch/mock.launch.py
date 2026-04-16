@@ -6,7 +6,9 @@ from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
-    bag_path = "/workspaces/data/bag/520双创飙车事件/"
+    # NOTE:
+    # 修改此处以回放 Bag
+    bag_path = "/workspaces/data/bag/battlefield_0/"
     play_bag = ExecuteProcess(
         cmd=["ros2", "bag", "play", bag_path],
         output="screen",

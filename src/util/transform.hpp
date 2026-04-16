@@ -1,6 +1,5 @@
 #pragma once
 #include <Eigen/Geometry>
-#include <numbers>
 
 namespace point_lio::util {
 

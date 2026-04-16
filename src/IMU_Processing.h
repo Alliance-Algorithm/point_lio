@@ -21,9 +21,8 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
-/// *************Preconfiguration
+constexpr int kMaxImuInitializationCount = 100;
 
-#define MAX_INI_COUNT (100)
 const bool time_list(PointType& x, PointType& y); // {return (x.curvature < y.curvature);};
 
 /// *************IMU Process and undistortion
@@ -40,7 +39,7 @@ public:
     void set_acc_cov(const V3D& scaler);
     void Set_init(Eigen::Vector3d& tmp_gravity, Eigen::Matrix3d& rot);
 
-    MD(12, 12) state_cov = MD(12, 12)::Identity();
+    Matrixd<12, 12> state_cov = Matrixd<12, 12>::Identity();
     int lidar_type;
     V3D gravity_;
     bool imu_en;

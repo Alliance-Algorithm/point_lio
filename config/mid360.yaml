@@ -12,12 +12,12 @@
     runtime_pos_log_enable: false # Option: true
 
     common:
-      lid_topic: "livox/lidar_192_168_100_174"
-      imu_topic: "livox/imu_192_168_100_174"
+      lid_topic: "livox/lidar"
+      imu_topic: "livox/imu"
       # 从 base_link 到 lidar_link 的变换
       init_pose:
-        translation: [0.00, 0.00, +0.40]
-        orientation: [0.0, 0.0, 180.0]
+        translation: [0.00, 0.00, +0.60]
+        orientation: [0.0, 180.0, 0.0]
       con_frame: false # true: if you need to combine several LiDAR frames into one
       con_frame_num: 1 # the number of frames combined
       cut_frame: false # true: if you need to cut one LiDAR frame into several subframes

@@ -7,8 +7,6 @@
 
 using namespace std;
 
-#define IS_VALID(a) ((abs(a) > 1e8) ? true : false)
-
 typedef pcl::PointXYZINormal PointType;
 typedef pcl::PointCloud<PointType> PointCloudXYZI;
 

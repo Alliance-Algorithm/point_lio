@@ -2,9 +2,6 @@
 
 #include <omp.h>
 
-#define RETURN0     0x00
-#define RETURN0AND1 0x10
-
 const bool time_list_cut_frame(PointType& x, PointType& y) { return (x.curvature < y.curvature); }
 
 Preprocess::Preprocess()
@@ -139,7 +136,8 @@ void Preprocess::process_cut_frame_livox(
         }
     }
 }
-#define MAX_LINE_NUM 128
+constexpr int kMaxLineCount = 128;
+
 void Preprocess::process_cut_frame_pcl2(
     const sensor_msgs::msg::PointCloud2::SharedPtr& msg, deque<PointCloudXYZI::Ptr>& pcl_out,
     deque<double>& time_lidar, const int required_frame_num, int scan_count) {
@@ -152,11 +150,11 @@ void Preprocess::process_cut_frame_pcl2(
         int plsize = pl_orig.points.size();
         pl_surf.reserve(plsize);
 
-        bool is_first[MAX_LINE_NUM];
-        double yaw_fp[MAX_LINE_NUM] = {0};                        // yaw of first scan point
+        bool is_first[kMaxLineCount];
+        double yaw_fp[kMaxLineCount] = {0};                       // yaw of first scan point
         double omega_l = 3.61;                                    // scan angular velocity (deg/ms)
-        float yaw_last[MAX_LINE_NUM] = {0.0};                     // yaw of last scan point
-        float time_last[MAX_LINE_NUM] = {0.0};                    // last offset time
+        float yaw_last[kMaxLineCount] = {0.0};                    // yaw of last scan point
+        float time_last[kMaxLineCount] = {0.0};                   // last offset time
 
         if (pl_orig.points[plsize - 1].time > 0) {
             given_offset_time = true;

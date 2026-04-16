@@ -4,10 +4,6 @@
 #include <Eigen/Core>
 #include <math.h>
 
-// #include <common_lib.h>
-
-#define SKEW_SYM_MATRX(v) 0.0, -v[2], v[1], v[2], 0.0, -v[0], -v[1], v[0], 0.0
-
 template <typename T>
 Eigen::Matrix<T, 3, 3> skew_sym_mat(const Eigen::Matrix<T, 3, 1>& v) {
     Eigen::Matrix<T, 3, 3> skew_sym_mat;
@@ -21,8 +17,7 @@ Eigen::Matrix<T, 3, 3> Exp(const Eigen::Matrix<T, 3, 1>& ang) {
     Eigen::Matrix<T, 3, 3> Eye3 = Eigen::Matrix<T, 3, 3>::Identity();
     if (ang_norm > 0.0000001) {
         Eigen::Matrix<T, 3, 1> r_axis = ang / ang_norm;
-        Eigen::Matrix<T, 3, 3> K;
-        K << SKEW_SYM_MATRX(r_axis);
+        Eigen::Matrix<T, 3, 3> K = skew_sym_mat(r_axis);
         /// Roderigous Tranformation
         return Eye3 + std::sin(ang_norm) * K + (1.0 - std::cos(ang_norm)) * K * K;
     } else {
@@ -37,9 +32,7 @@ Eigen::Matrix<T, 3, 3> Exp(const Eigen::Matrix<T, 3, 1>& ang_vel, const Ts& dt) 
 
     if (ang_vel_norm > 0.0000001) {
         Eigen::Matrix<T, 3, 1> r_axis = ang_vel / ang_vel_norm;
-        Eigen::Matrix<T, 3, 3> K;
-
-        K << SKEW_SYM_MATRX(r_axis);
+        Eigen::Matrix<T, 3, 3> K = skew_sym_mat(r_axis);
 
         T r_ang = ang_vel_norm * dt;
 
@@ -55,9 +48,8 @@ Eigen::Matrix<T, 3, 3> Exp(const T& v1, const T& v2, const T& v3) {
     T&& norm = sqrt(v1 * v1 + v2 * v2 + v3 * v3);
     Eigen::Matrix<T, 3, 3> Eye3 = Eigen::Matrix<T, 3, 3>::Identity();
     if (norm > 0.00001) {
-        T r_ang[3] = {v1 / norm, v2 / norm, v3 / norm};
-        Eigen::Matrix<T, 3, 3> K;
-        K << SKEW_SYM_MATRX(r_ang);
+        Eigen::Matrix<T, 3, 1> rotation_axis(v1 / norm, v2 / norm, v3 / norm);
+        Eigen::Matrix<T, 3, 3> K = skew_sym_mat(rotation_axis);
 
         /// Roderigous Tranformation
         return Eye3 + std::sin(norm) * K + (1.0 - std::cos(norm)) * K * K;
@@ -95,7 +87,7 @@ Eigen::Matrix<T, 3, 1> RotMtoEuler(const Eigen::Matrix<T, 3, 3>& rot) {
 template <typename T>
 Eigen::Matrix3d Jacob_right_inv(Eigen::Vector3d& vec) {
     Eigen::Matrix3d hat_v, res;
-    hat_v << SKEW_SYM_MATRX(vec);
+    hat_v = skew_sym_mat(vec);
     if (vec.norm() > 1e-6) {
         res = Eigen::Matrix<double, 3, 3>::Identity() + 0.5 * hat_v
             + (1 - vec.norm() * std::cos(vec.norm() / 2) / 2 / std::sin(vec.norm() / 2)) * hat_v
