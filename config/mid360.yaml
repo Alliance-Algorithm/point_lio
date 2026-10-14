@@ -12,8 +12,8 @@
     runtime_pos_log_enable: false # Option: true
 
     common:
-      lid_topic: "livox/lidar_192_168_100_174"
-      imu_topic: "livox/imu_192_168_100_174"
+      lid_topic: "livox/lidar_192_168_100_120"
+      imu_topic: "livox/imu_192_168_100_120"
       # 从 base_link 到 lidar_link 的变换
       init_pose:
         translation: [0.00, 0.00, +0.56]
