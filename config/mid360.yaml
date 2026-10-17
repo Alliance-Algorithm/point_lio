@@ -16,7 +16,7 @@
       imu_topic: "livox/imu_192_168_100_120"
       # 从 base_link 到 lidar_link 的变换
       init_pose:
-        translation: [0.997, -0.135, +0.1377]
+        translation: [0.1234, -0.1114, +0.1377]
         orientation: [-149.001, -1.732, -30.015]
       con_frame: false # true: if you need to combine several LiDAR frames into one
       con_frame_num: 1 # the number of frames combined
